@@ -44,7 +44,9 @@ If you would like to try the *ISLR* labs using these two packages instead of bas
 - Run the `setup` code chunk and/or **knit** <img src="../README-img/knit-icon.png" alt="knit" width = "20"/> icon your Rmd document to verify that no errors occur.
 
 ```{r setup}
-
+library(tidyverse)
+  library(tidymodels)
+library(readr)
 ```
 
 ![check-in](../README-img/noun-magnifying-glass.png) **Check in**
@@ -74,10 +76,26 @@ In the R code chunk below titled `hfi-2016`, type the code that does the followi
 - Assigns the result to a data frame named `hfi_2016`.
 
 ```{r hfi-2016}
+local_hfi_path <- "~/STA 518/PREPARATIONS/activity02-slr/day01-fitting/hfi.csv"
+library(readr) 
+
+hfi <- read_csv(local_hfi_path)
+
+library(dplyr)
+
+# Filter the dataset for entries from the year 2016
+hfi_2016 <- hfi %>%
+  filter(year == 2016)
+
+# View the first few rows of the filtered dataset to confirm
+head(hfi_2016)
+
+
 
 ```
 
 ### 1. Identify our research question(s)
+#### The research questions are: to predict a country's personal freedom score in 2016, specifically exploring the relationship between the personal freedom score (pf_score) and the political pressures and controls on media content index (pf_expression_control)
 
 The research question is often defined by you (or your company, boss, etc.).
 Today's research question/goal is to predict a country's personal freedom score in 2016.
@@ -91,13 +109,47 @@ Answer the following questions (use your markdown skills) and complete the follo
 
 2. What type of plot would you use to display the distribution of the personal freedom scores, `pf_score`? 
   Would this be the same type of plot to display the distribution of the political pressures and controls on media content index, `pf_expression_control`?
-
+#### histograms and density plots provide a clear visual representation of these characteristics.
 
 
 - In the R code chunk below titled `univariable-plots`, type the R code that displays this plot for `pf_score`.
 - In the R code chunk below titled `univariable-plots`, type the R code that displays this plot for `pf_expression_control`.
 
 ```{r distribution-plots}
+library(ggplot2)
+
+# Histogram for pf_score
+ggplot(hfi_2016, aes(x = pf_score)) +
+  geom_histogram(binwidth = 0.5, fill = "blue", color = "black") +
+  labs(title = "Distribution of Personal Freedom Scores in 2016",
+       x = "Personal Freedom Score",
+       y = "Frequency") +
+  theme_minimal()
+
+# Histogram for pf_expression_control
+ggplot(hfi_2016, aes(x = pf_expression_control)) +
+  geom_histogram(binwidth = 0.5, fill = "red", color = "black") +
+  labs(title = "Distribution of Political Pressures and Controls on Media Content Index in 2016",
+       x = "Political Pressures and Controls on Media Content Index",
+       y = "Frequency") +
+  theme_minimal()
+
+# Density plots for comparison
+# Density Plot for pf_score
+ggplot(hfi_2016, aes(x = pf_score)) +
+  geom_density(fill = "blue", alpha = 0.5) +
+  labs(title = "Density of Personal Freedom Scores in 2016",
+       x = "Personal Freedom Score",
+       y = "Density") +
+  theme_minimal()
+
+# Density Plot for pf_expression_control
+ggplot(hfi_2016, aes(x = pf_expression_control)) +
+  geom_density(fill = "red", alpha = 0.5) +
+  labs(title = "Density of Political Pressures and Controls on Media Content Index in 2016",
+       x = "Political Pressures and Controls on Media Content Index",
+       y = "Density") +
+  theme_minimal()
 
 ```
 
@@ -108,11 +160,21 @@ Answer the following questions (use your markdown skills) and complete the follo
 
 3. What type of plot would you use to display the relationship between the personal freedom score, `pf_score`, and the political pressures and controls on media content index,`pf_expression_control`?
 
-
+scater plot
 
 - In the R code chunk below titled `relationship-plot`, plot this relationship using the variable `pf_expression_control` as the predictor/explanatory variable.
 
 ```{r relationship-plot}
+library(ggplot2)
+
+# Plotting the relationship
+ggplot(hfi_2016, aes(x = pf_expression_control, y = pf_score)) +
+  geom_point(aes(color = region), alpha = 0.6) +  # Adding color coding by region and adjust point transparency
+  labs(title = "Relationship between Political Pressures on Media and Personal Freedom Score in 2016",
+       x = "Political Pressures and Controls on Media Content Index",
+       y = "Personal Freedom Score") +
+  theme_minimal() +
+  scale_color_viridis_d()  # Optional: Use a different color scale for better visual distinction
 
 ```
 
@@ -130,6 +192,22 @@ What numerical summary would you use to describe the relationship between two nu
 (hint: explore the `cor` function from Base R)
 
 ```{r challenge}
+library(dplyr)
+
+# Summary for pf_score
+hfi_2016 %>%
+  summarise(mean_pf_score = mean(pf_score, na.rm = TRUE),
+            median_pf_score = median(pf_score, na.rm = TRUE),
+            sd_pf_score = sd(pf_score, na.rm = TRUE),
+            iqr_pf_score = IQR(pf_score, na.rm = TRUE))
+# Summary for pf_expression_control
+hfi_2016 %>%
+  summarise(mean_pf_expression_control = mean(pf_expression_control, na.rm = TRUE),
+            median_pf_expression_control = median(pf_expression_control, na.rm = TRUE),
+            sd_pf_expression_control = sd(pf_expression_control, na.rm = TRUE),
+            iqr_pf_expression_control = IQR(pf_expression_control, na.rm = TRUE))
+# Correlation
+cor(hfi_2016$pf_score, hfi_2016$pf_expression_control, use = "complete.obs")
 
 ```
 
@@ -144,7 +222,7 @@ To begin, we will create a `{parsnip}` specification for a linear model.
 
 - In the code chunk below titled `parsnip-spec`, replace "verbatim" with "r" just before the code chunk title.
 
-```{verbatim parsnip-spec}
+```{r parsnip-spec}
 lm_spec <- linear_reg() %>%
   set_mode("regression") %>%
   set_engine("lm")
@@ -166,7 +244,7 @@ Look at your knitted document to see how this syntax appears.
 
 - In the code chunk below titled `fit-lm`, replace "verbatim" with "r" just before the code chunk title. 
 
-```{verbatim fit-lm}
+```{r fit-lm}
 slr_mod <- lm_spec %>% 
   fit(pf_score ~ pf_expression_control, data = hfi_2016)
 
@@ -201,7 +279,7 @@ We use `glance` from  `{broom}` (which is automatically loaded with `{tidymodels
 
 - In the code chunk below titled `glance-lm`, replace "verbatim" with "r" just before the code chunk title. 
 
-```{verbatim glance-mod}
+```{r glance-mod}
 glance(slr_mod)
 ```
 
@@ -234,7 +312,21 @@ Now, you will use your training dataset to fit a SLR model.
 
 - In the code chunk below titled `train-fit-lm`, replace "verbatim" with "r" just before the code chunk title and update the data set to your training R object you just created.
 
-```{verbatim train-fit-lm}
+```{r train-fit-lm}
+# Load necessary libraries
+library(tidymodels)
+library(broom)
+
+# Setting a seed for reproducibility
+set.seed(123)
+
+# Create an initial 80-20 split of the hfi_2016 dataset
+hfi_split <- initial_split(hfi_2016, prop = 0.8)
+
+# Assign the splits into training and testing datasets
+hfi_train <- training(hfi_split)
+hfi_test <- testing(hfi_split)
+
 slr_train <- lm_spec %>% 
   fit(pf_score ~ pf_expression_control, data = hfi_2016)
 
@@ -257,9 +349,11 @@ Now we will assess using the testing data set.
 
 - In the code chunk below titled `train-fit-lm`, replace "verbatim" with "r" just before the code chunk title and update `data_test` to whatever R object you assigned your testing data to above.
   
-```{verbatim glance-test}
-test_aug <- augment(slr_train, new_data = data_test)
+```{r glance-test}
+# Assessing the model using the testing dataset
+test_aug <- augment(slr_train, new_data = hfi_test)
 test_aug
+
 ```
 
 
@@ -288,10 +382,20 @@ We can use `broom::augment` to calculate these.
 
 - In the code chunk below titled `augment`, replace "verbatim" with "r" just before the code chunk title and update `data_test` to whatever R object you assigned your testing data to above. 
   
-```{verbatim augment}
-train_aug <- augment(slr_train)
+```{r augment}
+# Assuming slr_train is your fitted linear model on the training data
+# Augmenting the training data with model diagnostics
+train_aug <- augment(slr_train, new_data = hfi_train)
 
-train_aug
+# Augmenting the testing data with model diagnostics
+test_aug <- augment(slr_train, new_data = hfi_test)
+
+# Print the first few rows of augmented training data to check
+head(train_aug)
+
+# Print the first few rows of augmented testing data to check
+head(test_aug)
+
 ```
 
 
@@ -300,12 +404,8 @@ We should also verify this condition with a plot of the residuals vs. fitted (pr
 
 - In the code chunk below titled `fitted-residual`, replace "verbatim" with "r" just before the code chunk title. 
   
-```{verbatim fitted-residual}
-ggplot(data = train_aug, aes(x = .fitted, y = .resid)) +
-  geom_point() +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  xlab("Fitted values") +
-  ylab("Residuals")
+```{r fitted-residual}
+
 ```
 
 Notice here that `train_aug` can also serve as a data set because stored within it are the fitted values ($\hat{y}$) and the residuals.
@@ -321,7 +421,7 @@ Answer the following question:
 
 - In the code chunk below titled `residual-histogram`, replace "verbatim" with "r" just before the code chunk title. 
  
-```{verbatim fitted-residual}
+```{r histogram}
 ggplot(data = train_aug, aes(x = .resid)) +
   geom_histogram(binwidth = 0.25) +
   xlab("Residuals")
