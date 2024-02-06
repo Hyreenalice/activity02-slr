@@ -82,7 +82,7 @@ library(tidyverse)
 ## ✖ dplyr::lag()      masks stats::lag()
 ## ✖ yardstick::spec() masks readr::spec()
 ## ✖ recipes::step()   masks stats::step()
-## • Dig deeper into tidy modeling with R at https://www.tmwr.org
+## • Use suppressPackageStartupMessages() to eliminate package startup messages
 ```
 
 ```r
